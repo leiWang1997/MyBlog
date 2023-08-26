@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wanglei.dao.TagDao">
+
+    <insert id="saveTag" parameterType="tag">
+        insert into blog.t_tag values (default , #{name})
+    </insert>
+
+    <delete id="deleteTagById" parameterType="long">
+        delete from blog.t_tag where id=#{id};
+    </delete>
+
+    <update id="updateTag" parameterType="tag">
+        update blog.t_tag set name=#{name} where id=#{id}
+    </update>
+
+    <select id="getTagById" parameterType="Long" resultType="tag">
+        SELECT * FROM blog.t_tag
+        where id = #{id}
+    </select>
+
+    <select id="getTagByName" parameterType="string" resultType="tag">
+        SELECT * FROM blog.t_tag
+        where name = #{name}
+    </select>
+
+    <select id="getAllTag" resultType="tag">
+        SELECT *
+        FROM blog.t_tag
+    </select>
+
+    <insert id="saveIntoBlogAndTag" parameterType="blogAndTag">
+        insert into blog.t_blog_tags values(#{blogId}, #{tagId});
+    </insert>
+
+   <delete id="deleteBlogAndTagById" parameterType="long">
+       delete from blog.t_blog_tags where blogs_id = #{id}
+   </delete>
+
+    <select id="selTagsByBlogId" parameterType="long" resultType="tag">
+        SELECT t.*
+        FROM blog.t_tag t
+        JOIN blog.t_blog_tags bt ON t.id = bt.tags_id
+        WHERE bt.blogs_id = #{blogId}
+    </select>
+</mapper>

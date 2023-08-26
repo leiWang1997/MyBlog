@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wanglei.dao.BlogDao">
+
+
+    <resultMap id="ResultTwo" type="blog" autoMapping="true">
+        <id property="id" column="id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="firstPicture" column="first_picture"/>
+        <result property="shareStatement" column="share_statement"/>
+        <result property="typeId" column="type_id"/>
+
+        <!--给type对象：注入值-->
+        <association property="type" javaType="type">
+            <id property="id" column="type_id"/>
+        </association>
+
+        <!--给type对象：注入值-->
+        <association property="user" javaType="user">
+            <id property="id" column="user_id"/>
+        </association>
+    </resultMap>
+
+    <insert id="saveBlog" parameterType="blog" useGeneratedKeys="true">
+        <selectKey resultType="Long" keyProperty="id" order="AFTER">
+            select LAST_INSERT_ID()
+        </selectKey>
+
+        insert into blog.t_blog
+        values (id,#{appreciation}, #{commentabled}, #{content}, #{createTime}, #{firstPicture}, #{flag}, #{published}, #{recommend}, #{shareStatement}, #{title}, #{updateTime}, #{views}, #{type.id}, #{user.id}, #{description});
+    </insert>
+
+    <delete id="deleteBlogById" parameterType="long">
+        delete from blog.t_blog where id=#{id};
+    </delete>
+
+    <update id="updateBlog" parameterType="blog">
+        update blog.t_blog
+        set title = #{title}, content = #{content}, flag = #{flag},
+            first_picture = #{firstPicture}, description = #{description},
+            type_id = #{type.id}, update_time = #{updateTime}, published = #{published},
+            recommend = #{recommend}, commentabled = #{commentabled}, appreciation = #{appreciation}, share_statement = #{shareStatement}
+        where id=#{id};
+    </update>
+
+    <select id="getBlogById" parameterType="Long" resultMap="ResultTwo">
+        SELECT * FROM blog.t_blog
+        where id = #{id};
+    </select>
+
+    <select id="getBlogBySearch" parameterType="com.wanglei.vo.SearchBlog" resultType="blog">
+        <if test="title != null">
+            <bind name="myTitle" value="'%' + title + '%'"></bind>
+        </if>
+
+        select t_blog.id 'id', title, recommend, appreciation, commentabled, published, share_statement 'shareStatement', update_time 'updateTime', update_time 'createTime' ,tt.id 'type.id', tt.name 'type.name'
+        from blog.t_blog
+        inner join blog.t_type tt
+        on t_blog.type_id = tt.id
+        <where>
+            <if test="title != null and title != ''">
+                and binary title like #{myTitle}
+            </if>
+
+            <if test="typeId != null and typeId != ''">
+                and tt.id = #{typeId}
+            </if>
+
+            <if test="recommend != null and recommend != ''">
+                and recommend = #{recommend}
+            </if>
+        </where>
+    </select>
+
+    <select id="getAllBlog" resultMap="ResultTwo">
+        SELECT *
+        FROM blog.t_blog;
+    </select>
+
+    <select id="countBlogsByTagId" parameterType="long" resultType="int">
+        select count(*) from blog.t_blog_tags
+        where tags_id = #{tagId};
+    </select>
+
+    <select id="countBlogsByTypeId" parameterType="long" resultType="int">
+        select count(*) from blog.t_blog
+        where type_id = #{typeId};
+    </select>
+
+    <select id="getBlogsByTagId" parameterType="long" resultMap="ResultTwo">
+        select *
+        from blog.t_blog t
+        inner join blog.t_blog_tags bt
+        on t.id = bt.blogs_id
+        where bt.tags_id = #{tagId} and t.recommend = TRUE;
+    </select>
+
+    <select id="getBlogsByTypeId" parameterType="long" resultMap="ResultTwo">
+        select * from blog.t_blog
+        where type_id = #{typeId} and t_blog.recommend = TRUE;
+    </select>
+
+    <delete id="delTagsByBlog" parameterType="long">
+        delete
+        from blog.t_blog_tags
+        where blogs_id = #{blogId};
+    </delete>
+
+    <!--查询首页最新博客列表信息-->
+    <resultMap id="firstPageBlog" type="com.wanglei.vo.FirstPageBlog">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="firstPicture" column="first_picture"/>
+        <result property="views" column="views"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="description" column="description"/>
+        <result property="typeName" column="name"/>
+        <result property="nickname" column="nickname"/>
+        <result property="avatar" column="avatar"/>
+    </resultMap>
+    <select id="getFirstPageBlog" resultMap="firstPageBlog">
+        select b.id,b.title,b.first_picture, b.views,b.create_time,b.update_time,b.description,t.name ,u.nickname, u.avatar
+        from blog.t_blog b, blog.t_type t,blog.t_user u
+        where b.type_id = t.id and  u.id = b.user_id and b.published = 1
+    </select>
+
+    <!--查询推荐文章-->
+    <select id="getRecommendBlog" resultType="com.wanglei.vo.RecommendBlog">
+        SELECT
+            *
+        FROM
+            blog.t_blog
+        WHERE
+            t_blog.recommend = TRUE
+        ORDER BY
+            t_blog.create_time DESC LIMIT 4
+    </select>
+
+    <!--搜索文章-->
+    <select id="queryBlog" resultMap="firstPageBlog" parameterType="java.lang.String">
+        <bind name="pattern" value="'%' + query + '%'" />
+        select b.id,b.title,b.first_picture, b.views,b.update_time,b.description,t.name , u.nickname, u.avatar
+        from blog.t_blog b, blog.t_type t,blog.t_user u
+        where b.type_id = t.id and  u.id = b.user_id and b.published = 1 and (b.title like #{pattern} or b.content like  #{pattern})
+        order by b.update_time desc
+    </select>
+
+    <!--根据TypeId查询博客列表，显示在分类页面-->
+    <select id="getFirstPageBlogByTypeId" parameterType="long" resultMap="firstPageBlog">
+        select b.id,b.title,b.first_picture, b.views, b.update_time, b.description,t.name ,u.nickname, u.avatar
+        from blog.t_blog b, blog.t_type t,blog.t_user u
+        where b.type_id = t.id and u.id = b.user_id and b.published = 1 and b.type_id = #{typeId} order by b.update_time desc
+    </select>
+
+    <!--根据TypeId查询博客列表，显示在分类页面-->
+    <select id="getFirstPageBlogByTagId" parameterType="long" resultMap="firstPageBlog">
+        select b.id,b.title,b.first_picture, b.views, b.update_time, b.description,t.name ,u.nickname, u.avatar
+        from blog.t_blog b, blog.t_type t,blog.t_user u, blog.t_blog_tags bt
+        where b.type_id = t.id and u.id = b.user_id and b.published = 1 and bt.blogs_id = b.id and bt.tags_id = #{tagId} order by b.update_time desc
+    </select>
+
+    <resultMap id="detailedBlog" type="com.wanglei.vo.DetailedBlog">
+        <id property="id" column="bid"/>
+        <result property="firstPicture" column="first_picture"/>
+        <result property="flag" column="flag"/>
+<!--        <result property="title" column="title"/>-->
+        <result property="content" column="content"/>
+
+        <result property="views" column="views"/>
+<!--        <result property="commentCount" column="comment_count"/>-->
+        <result property="updateTime" column="update_time"/>
+        <result property="commentabled" column="commentabled"/>
+        <result property="shareStatement" column="share_statement"/>
+<!--        <result property="appreciation" column="appreciation"/>-->
+<!--        <result property="nickname" column="nickname"/>-->
+        <result property="avatar" column="avatar"/>
+    </resultMap>
+
+    <!--博客详情查询-->
+    <select id="getDetailedBlog" resultMap="detailedBlog">
+        select b.id bid,b.first_picture,b.flag,b.title,b.content,b.views,b.update_time,b.commentabled,b.share_statement,b.appreciation, u.nickname,u.avatar
+        from blog.t_blog b,blog.t_user u, blog.t_type t
+        where b.user_id = u.id and b.type_id = t.id and b.id = #{id}
+    </select>
+
+    <!--文章访问自增-->
+    <update id="updateViews" parameterType="long">
+        update blog.t_blog b set b.views = b.views+1 where b.id = #{id}
+    </update>
+
+</mapper>

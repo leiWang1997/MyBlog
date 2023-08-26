@@ -1,0 +1,28 @@
+# 应用服务 WEB 访问端口
+spring:
+  thymeleaf:
+    cache: false  #设置：thymeleaf 缓存为false, 这样修改之后马上生效，便于调试
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/blog?serverTimezone=UTC
+      username: root
+      password: 1103
+
+
+mybatis:
+  mapper-locations: classpath:com/wanglei/dao/*.xml    # 设置：接口绑定mapper路径
+  type-aliases-package: com.wanglei.pojo
+
+logging:
+  level:
+    root: info
+    com.wanglei: debug
+  file:
+    path: log/blog-dev.log
+
+pagehelper:
+  helper-dialect: mysql
+  support-methods-arguments: true
+  reasonable: true
+  params: coutSql
